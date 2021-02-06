@@ -1,5 +1,14 @@
 package com.tfar.mobcatcher;
 
+import java.util.List;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import com.feed_the_beast.mods.ftbchunks.api.ChunkDimPos;
+import com.feed_the_beast.mods.ftbchunks.api.ClaimedChunk;
+import com.feed_the_beast.mods.ftbchunks.impl.FTBChunksAPIImpl;
+
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.entity.Entity;
@@ -7,11 +16,14 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemUseContext;
 import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.*;
+import net.minecraft.util.ActionResultType;
+import net.minecraft.util.Hand;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.text.ITextComponent;
@@ -20,10 +32,6 @@ import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.List;
 
 public class ItemNet extends Item {
 
@@ -37,6 +45,13 @@ public class ItemNet extends Item {
   @Override
   @Nonnull
   public ActionResultType onItemUse(ItemUseContext context) {
+    if (context.getPlayer() instanceof ServerPlayerEntity) {
+      ClaimedChunk claimedChunk = FTBChunksAPIImpl.INSTANCE.getManager().getChunk(new ChunkDimPos(context.getWorld(), context.getPos()));
+      if (claimedChunk != null && !claimedChunk.canEdit((ServerPlayerEntity) context.getPlayer(), context.getWorld().getBlockState(context.getPos()))) {
+        return ActionResultType.SUCCESS;
+      }
+    }
+
     PlayerEntity player = context.getPlayer();
     World world = context.getWorld();
     if (player == null)return ActionResultType.FAIL;
@@ -57,6 +72,14 @@ public class ItemNet extends Item {
   public ActionResultType itemInteractionForEntity(ItemStack stack, PlayerEntity player, LivingEntity target, Hand hand) {
     if (target.getEntityWorld().isRemote || target instanceof PlayerEntity || !target.isAlive() || containsEntity(stack))
       return ActionResultType.FAIL;
+
+      if (player instanceof ServerPlayerEntity) {
+        ClaimedChunk claimedChunk = FTBChunksAPIImpl.INSTANCE.getManager().getChunk(new ChunkDimPos(player.world, target.getPosition()));
+        if (claimedChunk != null && !claimedChunk.canEdit((ServerPlayerEntity) player, player.world.getBlockState(target.getPosition()))) {
+          return ActionResultType.SUCCESS;
+        }
+      }
+
     EntityType<?> entityID = target.getType();
     if (isBlacklisted(entityID)) return ActionResultType.FAIL;
     ItemStack newStack = stack.copy();
@@ -104,7 +127,9 @@ public class ItemNet extends Item {
   {
     ItemStack newStack = stack.copy();
     newStack.setCount(1);
-    return new NetEntity(shooter.getPosX(), shooter.getPosY() + 1.25, shooter.getPosZ(), worldIn, newStack);
+    NetEntity netEntity = new NetEntity(shooter.getPosX(), shooter.getPosY() + 1.25, shooter.getPosZ(), worldIn, newStack);
+    netEntity.setShooter(shooter);
+    return netEntity;
   }
 
   //helper methods
