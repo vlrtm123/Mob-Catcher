@@ -1,17 +1,26 @@
 package com.tfar.mobcatcher;
 
+import javax.annotation.Nonnull;
+
+import com.feed_the_beast.mods.ftbchunks.api.ChunkDimPos;
+import com.feed_the_beast.mods.ftbchunks.api.ClaimedChunk;
+import com.feed_the_beast.mods.ftbchunks.impl.FTBChunksAPIImpl;
+
 import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.util.*;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.ActionResultType;
+import net.minecraft.util.Hand;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.SoundEvents;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
-
-import javax.annotation.Nonnull;
 
 public class ItemNetLauncher extends Item {
 
@@ -65,6 +74,13 @@ public class ItemNetLauncher extends Item {
     if (entityLiving instanceof PlayerEntity) {
       PlayerEntity player = (PlayerEntity) entityLiving;
       ItemStack stackAmmo = this.findNet(player);
+
+      if (player instanceof ServerPlayerEntity) {
+        ClaimedChunk claimedChunk = FTBChunksAPIImpl.INSTANCE.getManager().getChunk(new ChunkDimPos(worldIn, player.getPosition()));
+        if (claimedChunk != null && !claimedChunk.canEdit((ServerPlayerEntity) player, worldIn.getBlockState(player.getPosition()))) {
+          return;
+        }
+      }
 
       int i = this.getUseDuration(stackAmmo) - timeLeft;
       if (i < 0) return;
