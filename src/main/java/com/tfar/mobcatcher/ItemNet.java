@@ -32,6 +32,7 @@ import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 
 public class ItemNet extends Item {
 
@@ -116,6 +117,9 @@ public class ItemNet extends Item {
   @Override
   @Nonnull
   public ITextComponent getDisplayName(@Nonnull ItemStack stack) {
+    if (FMLEnvironment.dist == Dist.DEDICATED_SERVER) {
+      return new StringTextComponent("Mob Net");
+    }
     if (!containsEntity(stack))
       return new TranslationTextComponent(super.getTranslationKey(stack) + ".name");
     String s0 = "entity." + getID(stack);
